@@ -34,7 +34,7 @@ license: Apache-2.1
 maintainers:
   - name: Firstname Lastname
     email: emre@hotmail.com
-description: |-
+description: |
     ### blob of markdown
     More markdown
 ```

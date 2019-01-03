@@ -10,7 +10,7 @@ REST API to support read/write application metadata as yaml/json payloads with a
 
 Sample usage of the server is:
 
-
+```go
 	logger  := logger.CreateLogger()
 	db      := memstore.CreateInMemDB()
 	server  := server.CreateServer(logger,db)
@@ -18,3 +18,20 @@ Sample usage of the server is:
 	http.Handle("/",server.Routers)
 	logger.LogInfo("Listening localhost 8080...")
 	http.ListenAndServe("localhost:8080", server.Routers)
+```
+Sample application metadata payload is :
+
+```yaml
+title: My valid app
+version: 1.0.8
+company: Ecaglar Inc.
+website: https://ecaglar.net
+source: https://github.com/levye/repo
+license: Apache-2.1
+maintainers:
+  - name: Firstname Lastname
+    email: emre@hotmail.com
+description: |-
+    ### blob of markdown
+    More markdown
+```

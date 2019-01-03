@@ -1,5 +1,8 @@
 # go-appmetadata-yaml
+![alt text](https://github.com/matryer/gophers/blob/master/GOPHER_AVATARS.jpg)
+
 REST API to support read/write application metadata as yaml/json payloads with a integrated in-mem db 
+
 
 - Extended Logger
 - Custom validation function integration to handler

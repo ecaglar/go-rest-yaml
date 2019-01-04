@@ -228,7 +228,7 @@ Returns the record with version 1.0.0
 Returns the record with version 1.0.0 if exists.Does not check other parameters as version number is unique.
 
 **GET - /api/v1/apps?company=mycompany.com&title=my%20app**  
-Returns record(s) with company name "mycompany.com" and title **includes** "my app"  
+Returns record(s) with company name "mycompany.com" and title **contains** "my app"  
 
 **GET - /api/v1/apps?description=latest**  
 Returns record(s) with description **contains** "latest"   

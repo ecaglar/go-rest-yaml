@@ -179,5 +179,61 @@ description: |
 
 ## API Details
 
-Server provides a simple enpoint for GET and POST operations.
+Server provides a simple enpoint for GET and POST operations.  
+**/api/v1/apps**
+
+## POST OPERATION  
+
+Creates a application metadata. Accepts **yaml** or **json** payload. Both formats are supported. Since yaml is a superset of  
+json, yaml parser can also handle json. All fields and valid email addresses are required otherwise returns error. 
+
+Sample POST request is:
+
+```
+http://localhost:8080/api/v1/apps  
+```
+
+and body payload is:  
+
+```yaml
+title: My valid app
+version: 1.0.8
+company: Ecaglar Inc.
+website: https://ecaglar.net
+source: https://github.com/levye/repo
+license: Apache-2.1
+maintainers:
+  - name: Firstname Lastname
+    email: emre@hotmail.com
+description: |
+    ### blob of markdown
+    More markdown
+```
+
+## GET OPERATION  
+
+GET operation also has same endpoint. Changing the URL query parameters, you can query different records.
+
+###### Samples
+
+**GET - /api/v1/apps**  
+Returns all records
+
+**GET - /api/v1/apps?version=1.0.0**  
+Returns the record with version 1.0.0
+
+**GET - /api/v1/apps?version=1.0.0&title=my%20app**  
+Returns the record with version 1.0.0 if exists.Does not check other parameters as version number is unique.
+
+**GET - /api/v1/apps?company=mycompany.com&title=my%20app**  
+Returns record(s) with company name "mycompany.com" and title **includes** "my app"  
+
+**GET - /api/v1/apps?description=latest**  
+Returns record(s) with description **contains** "latest"   
+
+**GET - /api/v1/apps?maintainers.name=Bill&maintainers.name=Joe**  
+Returns record(s) which have/has maintainers name "Bill" and "Joe"   
+
+**GET - /api/v1/apps?maintainers.email=bill@hotmail.com&license=Apache-2.1**  
+Returns record(s) which have/has maintainers email "bill@hotmail.com" with licence "Apache-2.1"   
 

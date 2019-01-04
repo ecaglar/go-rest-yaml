@@ -1,5 +1,7 @@
 # go-appmetadata-yaml
-![alt text](https://github.com/matryer/gophers/blob/master/GOPHER_AVATARS.jpg)
+![alt text](https://github.com/matryer/gophers/blob/master/GOPHER_AVATARS.jpg)  
+
+https://github.com/levye/go-appmetadata-yaml/blob/master/README.md
 
 REST API to support read/write application metadata as yaml/json payloads with a integrated in-mem db 
 

@@ -176,3 +176,8 @@ description: |
     ### blob of markdown
     More markdown
 ```
+
+## API Details
+
+Server provides a simple enpoint for GET and POST operations.
+

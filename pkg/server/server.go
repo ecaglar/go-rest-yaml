@@ -22,13 +22,13 @@ type middleware func(h http.HandlerFunc) http.HandlerFunc
 //Shared dependencies, better to pass lots of parameters to handlers
 type Server struct {
 	DB      memstore.Database
-	Log     *logger.ExtLogger
+	Logger     *logger.AsyncLogger
 	Routers *mux.Router
 }
 
-func CreateServer(l *logger.ExtLogger, database memstore.Database) *Server {
+func CreateServer(l *logger.AsyncLogger, database memstore.Database) *Server {
 	server := &Server{
-		Log:     l,
+		Logger:     l,
 		Routers: mux.NewRouter(),
 		DB:      database,
 	}
@@ -98,7 +98,7 @@ func (s *Server) searchAppMetadataHandler(w http.ResponseWriter, r *http.Request
 	queryStr := r.URL.Query() //map[string][]string
 	result := s.DB.ReadWithParams(queryStr)
 	if r.Header.Get("Accept") == "application/json" {
-		s.Log.LogInfo("<-- appliation/json has been requested by client")
+		s.Logger.Log(logger.INFO,"<-- appliation/json has been requested by client")
 		json.NewEncoder(w).Encode(result)
 	} else {
 		yaml.NewEncoder(w).Encode(result)
@@ -116,12 +116,12 @@ func (s *Server) createAppMetadataHandler(w http.ResponseWriter, r *http.Request
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	bodyString := string(bodyBytes)
 
-	s.Log.LogInfo("body ", bodyString)
+	s.Logger.Log(logger.INFO,"body ", bodyString)
 
 	var m = model.Metadata{}
 	err := yaml.Unmarshal([]byte(bodyString), &m)
 	if err != nil {
-		s.Log.LogError(err.Error())
+		s.Logger.Log(logger.ERROR,err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
@@ -132,13 +132,13 @@ func (s *Server) createAppMetadataHandler(w http.ResponseWriter, r *http.Request
 //withValidation middleware performs validation check on request body
 func (s *Server) withValidation(validator validatorFunc) middleware {
 
-	s.Log.LogInfo("withValidation called")
+	s.Logger.Log(logger.INFO,"withValidation called")
 
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if isValid, errorStr := validator(r); !isValid {
-				s.Log.LogError("Request is not valid - ", errorStr)
+				s.Logger.Log(logger.ERROR,"Request is not valid - ", errorStr)
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprintf(w, "%s", "Request is not valid -", errorStr)
 				return
@@ -153,14 +153,14 @@ func (s *Server) withValidation(validator validatorFunc) middleware {
 //withLog middleware logs messages for the handler.
 func (s *Server) withLog() middleware {
 
-	s.Log.LogInfo("withLog called")
+	s.Logger.Log(logger.INFO,"withLog called")
 
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			s.Log.LogInfo("<--",r.Method)
-			s.Log.LogInfo("<--",r.Header.Get("Accept"))
-			s.Log.LogInfo("<--",r.URL.Path)
-			s.Log.LogInfo("<--",r.URL.RawQuery)
+			s.Logger.Log(logger.INFO,"<--",r.Method)
+			s.Logger.Log(logger.INFO,"<--",r.Header.Get("Accept"))
+			s.Logger.Log(logger.INFO,"<--",r.URL.Path)
+			s.Logger.Log(logger.INFO,"<--",r.URL.RawQuery)
 			h(w, r)
 		})
 

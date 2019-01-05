@@ -9,12 +9,12 @@ import (
 
 func main()  {
 
-	logger  := logger.CreateLogger()
+	asyncLogger  := logger.CreateAsyncLogger()
 	db 		:= memstore.CreateInMemDB()
-	server  := server.CreateServer(logger,db)
+	server  := server.CreateServer(asyncLogger,db)
 
 	http.Handle("/",server.Routers)
-	logger.LogInfo("Listening localhost 8080...")
+	asyncLogger.Log(logger.INFO,"Listening localhost 8080...")
 	http.ListenAndServe("localhost:8080", server.Routers)
 
 }

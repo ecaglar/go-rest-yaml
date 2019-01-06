@@ -37,6 +37,7 @@ func ValidateRequest(r *http.Request) (bool, string) {
 	}
 	return true, ""
 }
+
 //checkFields checks all mandatory fields inside request body and also validates email format
 func checkFields(m *model.Metadata) []string {
 	var emptyFields []string

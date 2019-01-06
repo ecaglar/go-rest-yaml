@@ -1,7 +1,9 @@
 //package memstore defines high level interface for in-memory storage operations
 package memstore
 
-type Database interface {
+import "../logger"
+
+type Storage interface {
 
 	//Insert adds a key-value object into the in-memory storage
 	Insert(key string, val interface{})
@@ -11,4 +13,6 @@ type Database interface {
 
 	//ReadWithParams performs search using given parameters
 	ReadWithParams(params map[string][]string) []interface{}
+
+	SetLogger(logger *logger.AsyncLogger)
 }

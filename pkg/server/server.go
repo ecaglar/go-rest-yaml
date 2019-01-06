@@ -1,13 +1,15 @@
 package server
 
 import (
-	"../memstore"
+	"../context"
 	"../logger"
 	"../model"
 	"../validator"
+	"../workpool"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -18,19 +20,18 @@ import (
 type validatorFunc func(h *http.Request) (bool, string)
 type middleware func(h http.HandlerFunc) http.HandlerFunc
 
-
 //Shared dependencies, better to pass lots of parameters to handlers
 type Server struct {
-	DB      memstore.Database
-	Logger     *logger.AsyncLogger
-	Routers *mux.Router
+	Context  *context.AppContext
+	Routers  *mux.Router
+	jobQueue chan workpool.WorkRequest
 }
 
-func CreateServer(l *logger.AsyncLogger, database memstore.Database) *Server {
+func CreateServer(ctx *context.AppContext, jobQueue chan workpool.WorkRequest) *Server {
 	server := &Server{
-		Logger:     l,
-		Routers: mux.NewRouter(),
-		DB:      database,
+		Context:  ctx,
+		Routers:  mux.NewRouter(),
+		jobQueue: jobQueue,
 	}
 	server.routes()
 	return server
@@ -96,9 +97,9 @@ func (s *Server) routes() {
 func (s *Server) searchAppMetadataHandler(w http.ResponseWriter, r *http.Request) {
 
 	queryStr := r.URL.Query() //map[string][]string
-	result := s.DB.ReadWithParams(queryStr)
+	result := s.Context.Storage.ReadWithParams(queryStr)
 	if r.Header.Get("Accept") == "application/json" {
-		s.Logger.Log(logger.INFO,"<-- appliation/json has been requested by client")
+		s.Context.Logger.Log(logger.INFO, "<-- appliation/json has been requested by client")
 		json.NewEncoder(w).Encode(result)
 	} else {
 		yaml.NewEncoder(w).Encode(result)
@@ -106,7 +107,10 @@ func (s *Server) searchAppMetadataHandler(w http.ResponseWriter, r *http.Request
 }
 
 //searchAppMetadataHandler creates the appliation metadata sent via body payload
-//supports both yaml and json payloads
+//supports both yaml and json payloads. It uses work queues in order to process
+//POST requests. So whenever it receives a POST request, it creates a work item and
+//and pass it to the work queue without waiting. Uses a buffered channel in order not
+//to block handler.
 func (s *Server) createAppMetadataHandler(w http.ResponseWriter, r *http.Request) {
 	var bodyBytes []byte
 	if r.Body != nil {
@@ -116,29 +120,35 @@ func (s *Server) createAppMetadataHandler(w http.ResponseWriter, r *http.Request
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	bodyString := string(bodyBytes)
 
-	s.Logger.Log(logger.INFO,"body ", bodyString)
+	s.Context.Logger.Log(logger.INFO, "Request body --> ", bodyString)
 
 	var m = model.Metadata{}
 	err := yaml.Unmarshal([]byte(bodyString), &m)
 	if err != nil {
-		s.Logger.Log(logger.ERROR,err.Error())
+		s.Context.Logger.Log(logger.ERROR, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "%s", err.Error())
 		return
 	}
-	s.DB.Insert(m.Version, m)
+
+	job := workpool.WorkRequest{
+		Payload: m,
+		ID:      uuid.New(),
+	}
+	s.jobQueue <- job
+
 }
 
 //withValidation middleware performs validation check on request body
 func (s *Server) withValidation(validator validatorFunc) middleware {
 
-	s.Logger.Log(logger.INFO,"withValidation called")
+	s.Context.Logger.Log(logger.INFO, "withValidation called")
 
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if isValid, errorStr := validator(r); !isValid {
-				s.Logger.Log(logger.ERROR,"Request is not valid - ", errorStr)
+				s.Context.Logger.Log(logger.ERROR, "Request is not valid - ", errorStr)
 				w.WriteHeader(http.StatusBadRequest)
 				fmt.Fprintf(w, "%s", "Request is not valid -", errorStr)
 				return
@@ -146,21 +156,20 @@ func (s *Server) withValidation(validator validatorFunc) middleware {
 				h(w, r)
 			}
 		})
-
 	}
 }
 
 //withLog middleware logs messages for the handler.
 func (s *Server) withLog() middleware {
 
-	s.Logger.Log(logger.INFO,"withLog called")
+	s.Context.Logger.Log(logger.INFO, "withLog called")
 
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			s.Logger.Log(logger.INFO,"<--",r.Method)
-			s.Logger.Log(logger.INFO,"<--",r.Header.Get("Accept"))
-			s.Logger.Log(logger.INFO,"<--",r.URL.Path)
-			s.Logger.Log(logger.INFO,"<--",r.URL.RawQuery)
+			s.Context.Logger.Log(logger.INFO, "<--", r.Method)
+			s.Context.Logger.Log(logger.INFO, "<--", r.Header.Get("Accept"))
+			s.Context.Logger.Log(logger.INFO, "<--", r.URL.Path)
+			s.Context.Logger.Log(logger.INFO, "<--", r.URL.RawQuery)
 			h(w, r)
 		})
 
@@ -168,6 +177,7 @@ func (s *Server) withLog() middleware {
 
 }
 
+//Chain function chains the handlers with middleware functions.
 func (s *Server) Chain(h http.HandlerFunc, m ...middleware) http.HandlerFunc {
 
 	if len(m) < 1 {

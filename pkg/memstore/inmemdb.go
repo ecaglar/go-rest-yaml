@@ -5,6 +5,7 @@ import (
 	"../model"
 	"strings"
 )
+
 //dedicated logger for storage operations
 var db_logger *logger.AsyncLogger
 
@@ -16,15 +17,22 @@ type memDB struct {
 
 //CreateInMemDB creates the underlying storage and logger
 func CreateInMemDB() *memDB {
-	db_logger = logger.CreateAsyncLogger() //create internal memstore logger
-	defer db_logger.Log(logger.INFO,"In-Memory memstore has been created")
+	if db_logger != nil {
+		defer db_logger.Log(logger.INFO, "In-Memory memstore has been created")
+	}
 	return &memDB{make(map[string]interface{})}
 }
 
 //Insert inserts given key val pair into the storage
 func (db *memDB) Insert(key string, val interface{}) {
 	db.keyValDB[key] = val
-	db_logger.Log(logger.INFO,"Value has been inserted to in-memory memstore with key: ", key)
+	if db_logger != nil {
+		db_logger.Log(logger.INFO, "Value has been inserted to in-memory memstore with key: ", key)
+	}
+}
+
+func (db *memDB) SetLogger(logger *logger.AsyncLogger) {
+	db_logger = logger
 }
 
 //ReadWithParams queries the storage for objects match the given url query strings

@@ -228,6 +228,11 @@ json, yaml parser can also handle json. All fields and valid email addresses are
 In order to optimize workload of server and decrease latency, work thread-pool paradigm has been implemented which is natively 
 supported by Go thanks to goroutines, channels and overall native concurrency support of the language. 
 
+Summery of the approach is:
+
+![alt text](https://github.com/levye/image-repo/blob/master/diagram.png)  
+
+
 Sample POST request is:
 
 ```

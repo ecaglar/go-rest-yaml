@@ -45,7 +45,9 @@ Project structure:
 
 		-Error (stderr)
 		
-		-Fatal (stderr)
+		-Fatal (stderr) 
+		
+	For each level, a log object and a channel 
 	
 	Sample usage for logger is :
 	```go

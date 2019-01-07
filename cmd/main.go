@@ -6,7 +6,6 @@ import (
 	"../pkg/memstore"
 	"../pkg/server"
 	"../pkg/workpool"
-	"log"
 	"net/http"
 )
 
@@ -43,5 +42,4 @@ func main() {
 	if err != nil {
 		asyncLogger.Log(logger.FATAL, err.Error())
 	}
-	log.Fatal()
 }

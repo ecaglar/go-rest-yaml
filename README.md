@@ -5,36 +5,38 @@ https://github.com/levye/go-appmetadata-yaml/blob/master/README.md
 
 REST API to support read/write application metadata as yaml/json payloads with a integrated in-mem db 
 
-
-- Extended Logger
+- Worker Thread-Pools request processing with channels
+- Async Logger using Channels
 - Custom validation function integration to handler
 - GET and POST to create and get application metadata
 - yaml and json payload support
 - Acecept header support (application/json) default is yaml
-- handler chaining for routers
+- Logger and Validator middlewares
 
 Project structure:
 
 - ## cmd/
 
-	This is where main function is. 
+	This is where main function is defined and all the components
+	are being utilized and integrated. main func simple performs;
+	
+	- create async logger
+	- create in-memory storage for application metadata
+	- create application contex to access common functionality across different modules
+	- initialize work queue and dispatcher
+	- create server which also initializes handlers
+	- listen and serve
+	
+	(to see how these steps are being implemented, continue reading)
 	Sample usage of the server is:
 
-	```go
-	logger  := logger.CreateLogger()
-	db      := memstore.CreateInMemDB()
-	server  := server.CreateServer(logger,db)
-
-	http.Handle("/",server.Routers)
-	logger.LogInfo("Listening localhost 8080...")
-	http.ListenAndServe("localhost:8080", server.Routers)
-	```
+	
 	
 - ## pkg
 
 	- ###### /logger
 	
-	This is a extended logger implementation on top of go logger.
+	Async logger implementation on top of go logger utilizing Go channels.
 	It provides three level of logging which is 
 	
 		-Warning (stdout)
@@ -42,13 +44,18 @@ Project structure:
 		-Info (stdout)
 
 		-Error (stderr)
+		
+		-Fatal (stderr) 
+		
+	For each level, a log object and a channel 
 	
 	Sample usage for logger is :
 	```go
-	logger  := logger.CreateLogger()
-	logger.LogInfo(...)
-	logger.LogWarning(...)
-	logger.LogIError(...)
+	asyncLogger := logger.CreateAsyncLogger()
+	asyncLogger.Log(logger.INFO, "log message..")
+	asyncLogger.Log(logger.WARNING, "log message..")
+	asyncLogger.Log(logger.ERROR, "log message..")
+	asyncLogger.Log(logger.FATAL, "log message..")
 	```
 	- ###### /memstore
 	
@@ -154,14 +161,33 @@ Project structure:
 Sample usage of the server is:
 
 ```go
-	logger  := logger.CreateLogger()
-	db      := memstore.CreateInMemDB()
-	server  := server.CreateServer(logger,db)
+	//create async logger
+	asyncLogger := logger.CreateAsyncLogger()
 
-	http.Handle("/",server.Routers)
-	logger.LogInfo("Listening localhost 8080...")
-	http.ListenAndServe("localhost:8080", server.Routers)
-```
+	storage := memstore.CreateInMemDB()
+	storage.SetLogger(asyncLogger)
+
+	//create application context
+	appContext := context.AppContext{
+		Storage: storage,
+		Logger:  asyncLogger,
+	}
+
+	//initialize dispatcher and pools
+	workQueue := make(chan workpool.WorkRequest, MaxQueue)
+	dispatcher := workpool.NewDispatcher(workQueue, MaxWorker, &appContext)
+	dispatcher.StartDispatcher()
+
+	//create server
+	server := server.CreateServer(&appContext, workQueue)
+
+	http.Handle("/", server.Routers)
+	asyncLogger.Log(logger.INFO, "Listening localhost 8080...")
+	err := http.ListenAndServe("localhost:8080", server.Routers)
+	if err != nil {
+		asyncLogger.Log(logger.FATAL, err.Error())
+	}
+	```
 Sample application metadata payload is :
 
 ```yaml
@@ -184,10 +210,28 @@ description: |
 Server provides a simple enpoint for GET and POST operations.  
 **/api/v1/apps**
 
+**POST**  operation is used to create application metadata.   
+Yaml or json payload is supported as payload and content type is "application/json"
+
+**GET**  operation is used to read application metadata records. Search parameters are being passed via URL.
+Supported URL query search parameters are:  
+
+- { version, title, company, website, source, license, maintainers.name, maintainers.email and description}  
+**Note that** title and description parameters are used to check if record **contains!** those parameters.
+So full string check does not happen.
+
 ## POST OPERATION  
 
 Creates a application metadata. Accepts **yaml** or **json** payload. Both formats are supported. Since yaml is a superset of  
 json, yaml parser can also handle json. All fields and valid email addresses are required otherwise returns error. 
+
+In order to optimize workload of server and decrease latency, work thread-pool paradigm has been implemented which is natively 
+supported by Go thanks to goroutines, channels and overall native concurrency support of the language. 
+
+Summery of the approach is:
+
+![alt text](https://github.com/levye/image-repo/blob/master/diagram.png)  
+
 
 Sample POST request is:
 
@@ -218,6 +262,9 @@ GET operation also has same endpoint. Changing the URL query parameters, you can
 
 ###### Samples
 
+**POST - /api/v1/apps**
+Accepts application metadata payload in yaml or json format in body.(application/son)
+
 **GET - /api/v1/apps**  
 Returns all records
 
@@ -236,6 +283,6 @@ Returns record(s) with description **contains** "latest"
 **GET - /api/v1/apps?maintainers.name=Bill&maintainers.name=Joe**  
 Returns record(s) which have/has maintainers name "Bill" and "Joe"   
 
-**GET - /api/v1/apps?maintainers.email=bill@hotmail.com&license=Apache-2.1**  
+**GET - /api/v1/apps?maintainers.email=bill@c.com&license=Apache-2.1**  
 Returns record(s) which have/has maintainers email "bill@hotmail.com" with licence "Apache-2.1"   
 

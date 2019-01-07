@@ -262,6 +262,9 @@ GET operation also has same endpoint. Changing the URL query parameters, you can
 
 ###### Samples
 
+**POST - /api/v1/apps**
+Accepts application metadata payload in yaml or json format in body.(application/son)
+
 **GET - /api/v1/apps**  
 Returns all records
 
@@ -280,6 +283,6 @@ Returns record(s) with description **contains** "latest"
 **GET - /api/v1/apps?maintainers.name=Bill&maintainers.name=Joe**  
 Returns record(s) which have/has maintainers name "Bill" and "Joe"   
 
-**GET - /api/v1/apps?maintainers.email=bill@hotmail.com&license=Apache-2.1**  
+**GET - /api/v1/apps?maintainers.email=bill@c.com&license=Apache-2.1**  
 Returns record(s) which have/has maintainers email "bill@hotmail.com" with licence "Apache-2.1"   
 

@@ -284,5 +284,10 @@ Returns record(s) with description **contains** "latest"
 Returns record(s) which have/has maintainers name "Bill" and "Joe"   
 
 **GET - /api/v1/apps?maintainers.email=bill@c.com&license=Apache-2.1**  
-Returns record(s) which have/has maintainers email "bill@hotmail.com" with licence "Apache-2.1"   
+Returns record(s) which have/has maintainers email "bill@hotmail.com" with licence "Apache-2.1"
+
+**TO GET PDF VERSION OF README.md**  
+
+![alt text](https://cloudconvert.com/converter/qrcode?url=//hollie.infra.cloudconvert.com/download/~30c6d053d1b477fb46b5a4c65005556d216f7fb2bb5cb8a554826e72ba0f95d41204facb444074f23f52af00)  
+
 

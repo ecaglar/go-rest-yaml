@@ -6,6 +6,7 @@ import (
 	"../pkg/memstore"
 	"../pkg/server"
 	"../pkg/workpool"
+	"log"
 	"net/http"
 )
 
@@ -38,6 +39,9 @@ func main() {
 
 	http.Handle("/", server.Routers)
 	asyncLogger.Log(logger.INFO, "Listening localhost 8080...")
-	http.ListenAndServe("localhost:8080", server.Routers)
-
+	err := http.ListenAndServe("localhost:8080", server.Routers)
+	if err != nil {
+		asyncLogger.Log(logger.FATAL, err.Error())
+	}
+	log.Fatal()
 }

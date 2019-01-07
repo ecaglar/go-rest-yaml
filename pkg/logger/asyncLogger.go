@@ -1,7 +1,7 @@
 /*
 Package logger defines a async logger using channels.
-Three different log level has been defined which are INFO,WARNING and ERROR
-INFO and WARNING logs are sent to Stdout and ERROR logs to StdErr by default
+Three different log level has been defined which are INFO,WARNING ,ERROR and FATAL
+INFO and WARNING logs are sent to Stdout and ERROR FATAL logs to StdErr by default
 */
 package logger
 
@@ -17,6 +17,7 @@ const (
 	INFO    LogLevel = iota
 	WARNING LogLevel = iota
 	ERROR   LogLevel = iota
+	FATAL   LogLevel = iota
 )
 
 //LogLevelStr defines log levels that can be used.
@@ -25,6 +26,7 @@ var LogLevelStr = [...]string{
 	"INFO",
 	"WARNING",
 	"ERROR",
+	"FATAL",
 }
 
 func (level LogLevel) string() string {
@@ -42,9 +44,11 @@ type AsyncLogger struct {
 	info           *log.Logger
 	warning        *log.Logger
 	error          *log.Logger
+	fatal          *log.Logger
 	infoLogChan    chan AsyncLogMsg
 	warningLogChan chan AsyncLogMsg
 	errorLogChan   chan AsyncLogMsg
+	fatalLogChan   chan AsyncLogMsg
 
 	//stop signal
 	stop chan bool
@@ -70,9 +74,11 @@ func CreateAsyncLogger() *AsyncLogger {
 		info:           log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
 		warning:        log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lshortfile),
 		error:          log.New(os.Stderr, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
+		fatal:          log.New(os.Stderr, "FATAL: ", log.Ldate|log.Ltime|log.Lshortfile),
 		infoLogChan:    make(chan AsyncLogMsg),
 		warningLogChan: make(chan AsyncLogMsg),
 		errorLogChan:   make(chan AsyncLogMsg),
+		fatalLogChan:   make(chan AsyncLogMsg),
 		stop:           make(chan bool),
 	}
 	asyncLogger.startLogger()
@@ -94,6 +100,9 @@ func (l *AsyncLogger) listen() {
 			l.info.Println(logMsg.level.string(), " : ", logMsg.logMsg)
 		case logMsg := <-l.errorLogChan:
 			l.info.Println(logMsg.level.string(), " : ", logMsg.logMsg)
+		case logMsg := <-l.fatalLogChan:
+			l.fatal.Println(logMsg.level.string(), " : ", logMsg.logMsg)
+			os.Exit(1)
 		case <-l.stop:
 			return
 		}
@@ -112,6 +121,9 @@ func (l *AsyncLogger) Log(level LogLevel, msg ...string) {
 
 	case ERROR:
 		go func() { l.errorLogChan <- AsyncLogMsg{level: level, logMsg: msg} }()
+
+	case FATAL:
+		go func() { l.fatalLogChan <- AsyncLogMsg{level: level, logMsg: msg} }()
 
 	}
 }

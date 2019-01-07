@@ -27,6 +27,7 @@ type Server struct {
 	jobQueue chan workpool.WorkRequest
 }
 
+//CreateServer creates and initialize a server instance and also creates handlers
 func CreateServer(ctx *context.AppContext, jobQueue chan workpool.WorkRequest) *Server {
 	server := &Server{
 		Context:  ctx,
@@ -52,36 +53,41 @@ If no search paramater passed via URL then it means server should return all dat
 TODO: One point to pay attention here it is not feasible to return all data especially if data is huge
 TODO: so there should be additional solutions like "paging" in order to prevent performance issues
 
-**GET - /api/v1/apps**
+POST - /api/v1/apps
+yaml or json payload inside body (application/json)
+
+GET - /api/v1/apps
 Returns all records
 
-**GET - /api/v1/apps?version=1.0.0**
+GET - /api/v1/apps?version=1.0.0
 Returns the record with version 1.0.0
 
-**GET - /api/v1/apps?version=1.0.0&title=my%20app**
+GET - /api/v1/apps?version=1.0.0&title=my%20app
 Returns the record with version 1.0.0 if exists.Does not check other parameters as version number is unique.
 
-**GET - /api/v1/apps?company=mycompany.com&title=my%20app**
+GET - /api/v1/apps?company=mycompany.com&title=my%20app
 Returns record(s) with company name "mycompany.com" and title **contains** "my app"
 
-**GET - /api/v1/apps?description=latest**
+GET - /api/v1/apps?description=latest
 Returns record(s) with description **contains** "latest"
 
-**GET - /api/v1/apps?maintainers.name=Bill&maintainers.name=Joe**
+GET - /api/v1/apps?maintainers.name=Bill&maintainers.name=Joe
 Returns record(s) which have/has maintainers name "Bill" and "Joe"
 
-**GET - /api/v1/apps?maintainers.email=bill@hotmail.com&license=Apache-2.1**
+GET - /api/v1/apps?maintainers.email=bill@hotmail.com&license=Apache-2.1
 Returns record(s) which have/has maintainers email "bill@hotmail.com" with licence "Apache-2.1"
 
 
-I dont want to inject search params as json or yaml inside body and send with POST due to following reasons,
-1-cache issues
-2-cannot be bookmarked
-3-url has 2000 char capacity so we still have ways
+Injecting  search params as json or yaml inside body and send with POST is not a good idea due to following reasons,
+	cache issues
+	cannot be bookmarked
+	url has 2000 char capacity so we still have ways
 */
 //routes inits handlers for mux
+//We chain our appropriate middleware handlers.
 func (s *Server) routes() {
 	s.Routers.HandleFunc("/api/v1/apps", s.Chain(s.createAppMetadataHandler,
+
 		s.withValidation(validator.ValidateRequest),
 		s.withLog())).Methods("POST")
 
@@ -146,7 +152,6 @@ func (s *Server) withValidation(validator validatorFunc) middleware {
 
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			if isValid, errorStr := validator(r); !isValid {
 				s.Context.Logger.Log(logger.ERROR, "Request is not valid - ", errorStr)
 				w.WriteHeader(http.StatusBadRequest)
@@ -166,6 +171,7 @@ func (s *Server) withLog() middleware {
 
 	return func(h http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 			s.Context.Logger.Log(logger.INFO, "<--", r.Method)
 			s.Context.Logger.Log(logger.INFO, "<--", r.Header.Get("Accept"))
 			s.Context.Logger.Log(logger.INFO, "<--", r.URL.Path)
@@ -174,7 +180,6 @@ func (s *Server) withLog() middleware {
 		})
 
 	}
-
 }
 
 //Chain function chains the handlers with middleware functions.

@@ -262,7 +262,7 @@ GET operation also has same endpoint. Changing the URL query parameters, you can
 
 ###### Samples
 
-**POST - /api/v1/apps**
+**POST - /api/v1/apps**  
 Accepts application metadata payload in yaml or json format in body.(application/son)
 
 **GET - /api/v1/apps**  
